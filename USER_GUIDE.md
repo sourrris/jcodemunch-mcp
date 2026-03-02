@@ -58,6 +58,26 @@ Add to `.vscode/settings.json`:
 }
 ```
 
+### Google Antigravity
+
+1. Open the Agent pane → click the `⋯` menu → **MCP Servers** → **Manage MCP Servers**
+2. Click **View raw config** to open `mcp_config.json`
+3. Add the entry below, save, then restart the MCP server from the Manage MCPs pane
+
+```json
+{
+  "mcpServers": {
+    "jcodemunch": {
+      "command": "jcodemunch-mcp",
+      "env": {
+        "GITHUB_TOKEN": "ghp_xxxxxxxx",
+        "ANTHROPIC_API_KEY": "sk-ant-xxxxxxxx"
+      }
+    }
+  }
+}
+```
+
 ---
 
 ## Workflows

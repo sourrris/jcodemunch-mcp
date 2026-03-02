@@ -27,7 +27,7 @@ Precision context beats brute-force context.
 
 **Stop dumping files into context windows. Start retrieving exactly what the agent needs.**
 
-jCodeMunch indexes a codebase once using tree-sitter AST parsing, then allows MCP-compatible agents (Claude Desktop, VS Code, and others) to **discover and retrieve code by symbol** instead of brute-reading files.
+jCodeMunch indexes a codebase once using tree-sitter AST parsing, then allows MCP-compatible agents (Claude Desktop, VS Code, Google Antigravity, and others) to **discover and retrieve code by symbol** instead of brute-reading files.
 
 Every symbol stores:
 - Signature
@@ -128,11 +128,31 @@ jcodemunch-mcp --help
 
 ### Claude Desktop / Claude Code
 
-macOS / Linux  
+macOS / Linux
 `~/.config/claude/claude_desktop_config.json`
 
-Windows  
+Windows
 `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "jcodemunch": {
+      "command": "jcodemunch-mcp",
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+### Google Antigravity
+
+1. Open the Agent pane → click the `⋯` menu → **MCP Servers** → **Manage MCP Servers**
+2. Click **View raw config** to open `mcp_config.json`
+3. Add the entry below, save, then restart the MCP server from the Manage MCPs pane
 
 ```json
 {
