@@ -81,6 +81,23 @@ def test_byte_offset_retrieval(tmp_path):
     assert "def foo():" in source
 
 
+def test_get_file_content_preserves_exact_newlines(tmp_path):
+    """Cached file reads should preserve the original newline style."""
+    store = IndexStore(base_path=str(tmp_path))
+    content = "a\r\nb\r\n"
+
+    store.save_index(
+        owner="testowner",
+        name="newlines",
+        source_files=["test.txt"],
+        symbols=[],
+        raw_files={"test.txt": content},
+        languages={"text": 1},
+    )
+
+    assert store.get_file_content("testowner", "newlines", "test.txt") == content
+
+
 def test_list_repos(tmp_path):
     """Test listing indexed repositories."""
     store = IndexStore(base_path=str(tmp_path))

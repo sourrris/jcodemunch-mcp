@@ -314,7 +314,8 @@ def index_folder(
             if not validate_path(folder_path, file_path):
                 continue
             try:
-                content = file_path.read_text(encoding="utf-8", errors="replace")
+                with open(file_path, "r", encoding="utf-8", errors="replace", newline="") as f:
+                    content = f.read()
             except Exception as e:
                 warnings.append(f"Failed to read {file_path}: {e}")
                 continue

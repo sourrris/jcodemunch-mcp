@@ -28,7 +28,7 @@ def get_file_content(
 
     if not index:
         return {"error": f"Repository not indexed: {owner}/{name}"}
-    if file_path not in index.source_files:
+    if not index.has_source_file(file_path):
         return {"error": f"File not found: {file_path}"}
 
     content = store.get_file_content(owner, name, file_path, _index=index)
@@ -41,6 +41,10 @@ def get_file_content(
         actual_start = 0
         actual_end = 0
         selected_content = ""
+    elif start_line is None and end_line is None:
+        actual_start = 1
+        actual_end = line_count
+        selected_content = content
     else:
         actual_start = max(1, min(start_line if start_line is not None else 1, line_count))
         actual_end = max(actual_start, min(end_line if end_line is not None else line_count, line_count))

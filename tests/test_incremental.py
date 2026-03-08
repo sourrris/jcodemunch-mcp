@@ -228,6 +228,23 @@ class TestIncrementalIndexFolder:
         assert inc3["new"] == 0
         assert inc3["deleted"] == 0
 
+    def test_index_folder_preserves_crlf_in_cached_files(self, tmp_path):
+        """Local folder indexing should not normalize CRLF line endings."""
+        src = tmp_path / "src"
+        src.mkdir()
+        store = tmp_path / "store"
+        file_path = src / "main.py"
+
+        with open(file_path, "w", encoding="utf-8", newline="") as f:
+            f.write("def hello():\r\n    return 1\r\n")
+
+        result = index_folder(str(src), use_ai_summaries=False, storage_path=str(store))
+
+        assert result["success"] is True
+        owner, repo_name = result["repo"].split("/", 1)
+        cached = IndexStore(base_path=str(store)).get_file_content(owner, repo_name, "main.py")
+        assert cached == "def hello():\r\n    return 1\r\n"
+
     def test_local_repo_ids_include_path_hash_and_do_not_collide(self, tmp_path):
         """Two folders with the same basename should get distinct local repo ids."""
         left = tmp_path / "left" / "shared"

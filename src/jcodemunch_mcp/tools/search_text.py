@@ -66,8 +66,10 @@ def search_text(
         full_path = store._safe_content_path(content_dir, file_path)
         if not full_path:
             continue
-        content = store.get_file_content(owner, name, file_path, _index=index)
-        if content is None:
+        try:
+            with open(full_path, "r", encoding="utf-8", errors="replace", newline="") as f:
+                content = f.read()
+        except OSError:
             continue
 
         files_searched += 1

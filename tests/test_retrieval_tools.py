@@ -190,6 +190,28 @@ def test_get_file_content_handles_empty_file(tmp_path):
     assert result["content"] == ""
 
 
+def test_get_file_content_returns_unsliced_content_verbatim(tmp_path):
+    """Unsliced file retrieval should return the cached text unchanged."""
+    store = IndexStore(base_path=str(tmp_path))
+    content = "first\r\nsecond\r\n"
+    store.save_index(
+        owner="retrieval",
+        name="verbatim",
+        source_files=["demo.txt"],
+        symbols=[],
+        raw_files={"demo.txt": content},
+        languages={"text": 1},
+        file_languages={"demo.txt": "text"},
+    )
+
+    result = get_file_content("retrieval/verbatim", "demo.txt", storage_path=str(tmp_path))
+
+    assert result["line_count"] == 2
+    assert result["start_line"] == 1
+    assert result["end_line"] == 2
+    assert result["content"] == content
+
+
 def test_get_file_content_reports_missing_cached_file(tmp_path):
     """If metadata exists but raw content is gone, the tool should fail cleanly."""
     _seed_repo(tmp_path)

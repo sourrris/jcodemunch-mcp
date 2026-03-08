@@ -38,7 +38,7 @@ def get_file_outline(
     if not index:
         return {"error": f"Repository not indexed: {owner}/{name}"}
 
-    if file_path not in index.source_files:
+    if not index.has_source_file(file_path):
         return {
             "repo": f"{owner}/{name}",
             "file": file_path,

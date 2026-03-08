@@ -57,12 +57,17 @@ class CodeIndex:
     def __post_init__(self) -> None:
         if not self.display_name:
             self.display_name = self.name
-        # Build O(1) lookup dict once at load time
+        # Build O(1) lookup structures once at load time.
         self._symbol_index: dict[str, dict] = {s["id"]: s for s in self.symbols if "id" in s}
+        self._source_file_set: set[str] = set(self.source_files)
 
     def get_symbol(self, symbol_id: str) -> Optional[dict]:
         """Find a symbol by ID (O(1))."""
         return self._symbol_index.get(symbol_id)
+
+    def has_source_file(self, file_path: str) -> bool:
+        """Check whether a file is present in the index."""
+        return not self.source_files or file_path in self._source_file_set
 
     def search(self, query: str, kind: Optional[str] = None, file_pattern: Optional[str] = None) -> list[dict]:
         """Search symbols with weighted scoring."""
@@ -202,6 +207,19 @@ class IndexStore:
         except (OSError, ValueError):
             return None
 
+    def _write_cached_text(self, path: Path, content: str) -> None:
+        """Write cached text without newline translation."""
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(content)
+
+    def _read_cached_text(self, path: Path) -> Optional[str]:
+        """Read cached text without newline normalization."""
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace", newline="") as f:
+                return f.read()
+        except OSError:
+            return None
+
     def _repo_metadata_from_data(self, data: dict, owner: str, name: str) -> tuple[str, str, str]:
         """Normalize repo/owner/name fields from stored JSON."""
         repo_id = data.get("repo", f"{owner}/{name}")
@@ -315,8 +333,7 @@ class IndexStore:
             if not file_dest:
                 raise ValueError(f"Unsafe file path in raw_files: {file_path}")
             file_dest.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_dest, "w", encoding="utf-8") as f:
-                f.write(content)
+            self._write_cached_text(file_dest, content)
 
         return index
 
@@ -400,17 +417,14 @@ class IndexStore:
     ) -> Optional[str]:
         """Read a cached file's full content."""
         index = _index or self.load_index(owner, name)
-        if not index or (index.source_files and file_path not in index.source_files):
+        if not index or not index.has_source_file(file_path):
             return None
 
         content_path = self._safe_content_path(self._content_dir(owner, name), file_path)
         if not content_path or not content_path.exists():
             return None
 
-        try:
-            return content_path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            return None
+        return self._read_cached_text(content_path)
 
     def detect_changes(
         self,
@@ -554,8 +568,7 @@ class IndexStore:
             if not dest:
                 raise ValueError(f"Unsafe file path in raw_files: {fp}")
             dest.parent.mkdir(parents=True, exist_ok=True)
-            with open(dest, "w", encoding="utf-8") as f:
-                f.write(content)
+            self._write_cached_text(dest, content)
 
         return updated
 
