@@ -93,6 +93,46 @@ def test_search_text_truncates_across_grouped_matches(tmp_path):
     assert result["results"][0]["file"] == "include/no_symbols.h"
 
 
+def test_search_text_respects_file_pattern(tmp_path):
+    """file_pattern should constrain grouped search to matching files only."""
+    _seed_repo(tmp_path)
+
+    result = search_text(
+        "retrieval/demo",
+        "TODO",
+        file_pattern="src/*.py",
+        context_lines=1,
+        storage_path=str(tmp_path),
+    )
+
+    assert result["result_count"] == 1
+    assert [entry["file"] for entry in result["results"]] == ["src/main.py"]
+
+
+def test_search_text_clamps_context_lines(tmp_path):
+    """Excessively large context requests should be clamped, not blow up responses."""
+    _seed_repo(tmp_path)
+
+    result = search_text("retrieval/demo", "TODO", context_lines=999, storage_path=str(tmp_path))
+
+    assert result["context_lines"] == 10
+    grouped = {entry["file"]: entry["matches"] for entry in result["results"]}
+    assert grouped["src/main.py"][0]["before"] == ["def run():"]
+    assert grouped["src/main.py"][0]["after"] == ["    return FLAG", ""]
+
+
+def test_search_text_skips_missing_cached_files(tmp_path):
+    """Missing raw cache entries should not crash grouped search."""
+    _seed_repo(tmp_path)
+    cached = tmp_path / "retrieval-demo" / "include" / "no_symbols.h"
+    cached.unlink()
+
+    result = search_text("retrieval/demo", "TODO", storage_path=str(tmp_path))
+
+    assert result["result_count"] == 1
+    assert [entry["file"] for entry in result["results"]] == ["src/main.py"]
+
+
 def test_get_file_content_clamps_line_ranges(tmp_path):
     """get_file_content should clamp requested lines to file bounds."""
     _seed_repo(tmp_path)
@@ -110,3 +150,52 @@ def test_get_file_content_clamps_line_ranges(tmp_path):
     assert result["line_count"] == 3
     assert result["language"] == "python"
     assert result["content"] == "    # TODO: wire main\n    return FLAG"
+
+
+def test_get_file_content_handles_reversed_ranges(tmp_path):
+    """end_line before start_line should collapse to a valid single-line slice."""
+    _seed_repo(tmp_path)
+
+    result = get_file_content(
+        "retrieval/demo",
+        "src/main.py",
+        start_line=3,
+        end_line=1,
+        storage_path=str(tmp_path),
+    )
+
+    assert result["start_line"] == 3
+    assert result["end_line"] == 3
+    assert result["content"] == "    return FLAG"
+
+
+def test_get_file_content_handles_empty_file(tmp_path):
+    """Empty cached files should return a stable empty slice contract."""
+    store = IndexStore(base_path=str(tmp_path))
+    store.save_index(
+        owner="retrieval",
+        name="empty",
+        source_files=["empty.py"],
+        symbols=[],
+        raw_files={"empty.py": ""},
+        languages={"python": 1},
+        file_languages={"empty.py": "python"},
+    )
+
+    result = get_file_content("retrieval/empty", "empty.py", storage_path=str(tmp_path))
+
+    assert result["line_count"] == 0
+    assert result["start_line"] == 0
+    assert result["end_line"] == 0
+    assert result["content"] == ""
+
+
+def test_get_file_content_reports_missing_cached_file(tmp_path):
+    """If metadata exists but raw content is gone, the tool should fail cleanly."""
+    _seed_repo(tmp_path)
+    cached = tmp_path / "retrieval-demo" / "src" / "main.py"
+    cached.unlink()
+
+    result = get_file_content("retrieval/demo", "src/main.py", storage_path=str(tmp_path))
+
+    assert result["error"] == "File content not found: src/main.py"

@@ -30,6 +30,21 @@ class TestResolveRepo:
         assert owner == "octocat"
         assert name == "hello-world"
 
+    def test_display_name_lookup(self, tmp_path):
+        index_data = {
+            "repo": "local/hello-world-deadbeef",
+            "indexed_at": "2024-01-01T00:00:00",
+            "symbols": [],
+            "source_files": [],
+            "languages": {},
+            "display_name": "hello-world",
+        }
+        (tmp_path / "local-hello-world-deadbeef.json").write_text(json.dumps(index_data))
+
+        owner, name = resolve_repo("hello-world", storage_path=str(tmp_path))
+        assert owner == "local"
+        assert name == "hello-world-deadbeef"
+
     def test_unknown_repo_raises(self, tmp_path):
         with pytest.raises(ValueError, match="Repository not found: nonexistent"):
             resolve_repo("nonexistent", storage_path=str(tmp_path))

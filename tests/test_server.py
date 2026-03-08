@@ -113,3 +113,37 @@ async def test_call_tool_defaults_index_folder_incremental_true():
         follow_symlinks=False,
         incremental=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_call_tool_forwards_search_text_context_lines():
+    """Dispatcher should pass through grouped search options unchanged."""
+    with patch("jcodemunch_mcp.server.search_text", return_value={"result_count": 1}) as mock_search_text:
+        await call_tool("search_text", {"repo": "owner/repo", "query": "TODO", "context_lines": 3})
+
+    mock_search_text.assert_called_once_with(
+        repo="owner/repo",
+        query="TODO",
+        file_pattern=None,
+        max_results=20,
+        context_lines=3,
+        storage_path=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_call_tool_forwards_get_file_content_bounds():
+    """Dispatcher should route file-content lookups with optional bounds."""
+    with patch("jcodemunch_mcp.server.get_file_content", return_value={"file": "src/main.py"}) as mock_get_file_content:
+        await call_tool(
+            "get_file_content",
+            {"repo": "owner/repo", "file_path": "src/main.py", "start_line": 5, "end_line": 8},
+        )
+
+    mock_get_file_content.assert_called_once_with(
+        repo="owner/repo",
+        file_path="src/main.py",
+        start_line=5,
+        end_line=8,
+        storage_path=None,
+    )
